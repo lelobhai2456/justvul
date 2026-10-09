@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+
+{% block title %}IDOR & Broken Access Control - VulnLab{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Header -->
+    <div class="bg-cardbg border border-gray-800 rounded-xl p-6">
+        <div class="flex items-center gap-2">
+            <span class="text-xs font-mono uppercase bg-amber-950 text-amber-400 border border-amber-800 px-2 py-0.5 rounded">OWASP #01</span>
+            <span class="text-xs font-mono uppercase bg-red-950 text-red-400 border border-red-800 px-2 py-0.5 rounded">Broken Access Control</span>
+        </div>
+        <h1 class="text-2xl font-bold text-white mt-2 flex items-center gap-2">
+            <span>🔑</span> Insecure Direct Object References (IDOR)
+        </h1>
+        <p class="text-gray-400 text-sm mt-1 max-w-3xl">
+            IDOR occurs when an application exposes a reference to an internal implementation object (such as a database key <code class="text-cyan-300">?id=1</code>) without verifying if the requesting user has appropriate authorization to access that object.
+        </p>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <!-- Selector / Controller -->
+        <div class="lg:col-span-1 bg-cardbg border border-gray-800 rounded-xl p-5 flex flex-col justify-between">
+            <div>
+                <h2 class="text-base font-bold text-cyan-400 mb-2 flex items-center gap-2">
+                    <span>👤</span> Account Profile Query
+                </h2>
+                <p class="text-xs text-gray-400 mb-4">
+                    You are currently logged in as <strong class="text-cyan-300">{{ current_username }}</strong> (Session ID: {{ current_user_id }}). Notice that you can change the target ID to inspect anyone else's account secrets!
+                </p>
+
+                <!-- Parameter Tamper Form -->
+                <form action="{{ url_for('idor') }}" method="GET" class="space-y-3">
+                    <div>
+                        <label class="block text-xs font-mono text-gray-400 mb-1">Target User ID (?id=):</label>
+                        <input type="number" name="id" value="{{ current_id }}" class="w-full bg-terminal border border-gray-700 rounded p-2 text-xs text-cyan-300 font-mono focus:border-cyan-500 focus:outline-none" min="1" max="10" required>
+                    </div>
+                    <button type="submit" class="w-full bg-cyan-900 hover:bg-cyan-800 text-cyan-100 border border-cyan-700 font-semibold text-xs py-2 rounded transition">
+                        Fetch Profile Data &rarr;
+                    </button>
+                </form>
+
+                <!-- Quick ID Switcher -->
+                <div class="mt-4 pt-3 border-t border-gray-800">
+                    <span class="text-[11px] font-mono text-gray-400 block mb-1">KNOWN USERS IN DATABASE:</span>
+                    <div class="space-y-1">
+                        {% for u in all_users %}
+                        <a href="{{ url_for('idor', id=u['id']) }}" class="flex items-center justify-between p-1.5 rounded hover:bg-gray-800 text-xs text-gray-300 {% if current_id|string == u['id']|string %}bg-gray-800 border border-gray-700 text-cyan-300 font-semibold{% endif %}">
+                            <span>ID #{{ u['id'] }} - {{ u['username'] }}</span>
+                            <span class="text-[10px] uppercase font-mono px-1 rounded bg-gray-900 text-gray-400">{{ u['role'] }}</span>
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4 pt-3 border-t border-gray-800 text-[11px] font-mono text-gray-400">
+                Direct API Route:<br>
+                <a href="/api/user/{{ current_id }}" target="_blank" class="text-cyan-400 hover:underline">/api/user/{{ current_id }} (JSON)</a>
+            </div>
+        </div>
+
+        <!-- Leaked Profile Card -->
+        <div class="lg:col-span-2 bg-cardbg border border-gray-800 rounded-xl p-6 flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between mb-4 pb-3 border-b border-gray-800">
+                    <div>
+                        <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                            <span>📋</span> Record Details for User ID: {{ current_id }}
+                        </h3>
+                        <span class="text-xs text-gray-400">Object directly fetched from SQLite query without session verification</span>
+                    </div>
+                    {% if user_data and user_data['role'] == 'administrator' %}
+                        <span class="text-xs font-mono font-bold bg-red-950 text-red-300 border border-red-700 px-2 py-1 rounded">
+                            🚨 PRIVILEGED ADMIN RECORD EXPOSED
+                        </span>
+                    {% endif %}
+                </div>
+
+                {% if user_data %}
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-mono">
+                    <div class="p-3 bg-gray-950 rounded-lg border border-gray-800">
+                        <span class="text-gray-500 block">USERNAME:</span>
+                        <span class="text-base text-cyan-300 font-bold">{{ user_data['username'] }}</span>
+                    </div>
+                    <div class="p-3 bg-gray-950 rounded-lg border border-gray-800">
+                        <span class="text-gray-500 block">EMAIL ADDRESS:</span>
+                        <span class="text-base text-gray-200">{{ user_data['email'] }}</span>
+                    </div>
+                    <div class="p-3 bg-gray-950 rounded-lg border border-gray-800">
+                        <span class="text-gray-500 block">SYSTEM ROLE:</span>
+                        <span class="text-base {% if user_data['role'] == 'administrator' %}text-red-400 font-bold{% else %}text-emerald-400{% endif %}">
+                            {{ user_data['role'] }}
+                        </span>
+                    </div>
+                    <div class="p-3 bg-gray-950 rounded-lg border border-gray-800">
+                        <span class="text-gray-500 block">ACCOUNT BALANCE:</span>
+                        <span class="text-base text-yellow-300 font-bold">${{ "%.2f"|format(user_data['account_balance']) }}</span>
+                    </div>
+                    <div class="md:col-span-2 p-3 bg-gray-950 rounded-lg border border-gray-800">
+                        <span class="text-gray-500 block">BIO / PROFILE NOTES:</span>
+                        <span class="text-gray-300 font-sans">{{ user_data['bio'] }}</span>
+                    </div>
+                    <div class="md:col-span-2 p-3 bg-red-950/40 rounded-lg border border-red-900/60">
+                        <span class="text-red-400 font-bold block mb-1">SECRET API KEY / VAULT TOKEN (SENSITIVE LEAK):</span>
+                        <code class="text-red-300 text-sm font-bold bg-black/60 px-2 py-1 rounded block break-all">
+                            {{ user_data['secret_api_key'] }}
+                        </code>
+                    </div>
+                </div>
+                {% else %}
+                <div class="p-4 bg-gray-950 text-gray-500 rounded border border-gray-800 italic">
+                    User with ID {{ current_id }} does not exist.
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Vulnerability Note -->
+            <div class="mt-6 pt-4 border-t border-gray-800 text-xs text-gray-400">
+                <span class="font-bold text-amber-400">Why this is vulnerable:</span> The server reads <code class="text-cyan-300">request.args.get('id')</code> and queries the database immediately without verifying if <code class="text-yellow-300">session['user_id'] == requested_id</code> or if the session has administrator privileges.
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Defense Section -->
+    <div class="bg-cardbg border border-gray-800 rounded-xl p-6">
+        <h3 class="text-lg font-bold text-white mb-2 flex items-center gap-2">
+            <span>🛡️</span> Secure Implementation
+        </h3>
+        <pre><code class="language-python"># Always enforce authorization checks before returning data
+logged_in_user_id = session.get('user_id')
+if requested_id != logged_in_user_id and session.get('role') != 'administrator':
+    abort(403) # Forbidden</code></pre>
+    </div>
+
+</div>
+{% endblock %}

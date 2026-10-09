@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+
+{% block title %}Server-Side Request Forgery (SSRF) - VulnLab{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Header -->
+    <div class="bg-cardbg border border-gray-800 rounded-xl p-6">
+        <div class="flex items-center gap-2">
+            <span class="text-xs font-mono uppercase bg-red-950 text-red-400 border border-red-800 px-2 py-0.5 rounded">OWASP Top 10</span>
+            <span class="text-xs font-mono uppercase bg-cyan-950 text-cyan-400 border border-cyan-800 px-2 py-0.5 rounded">Pivoting / Internal Access</span>
+        </div>
+        <h1 class="text-2xl font-bold text-white mt-2 flex items-center gap-2">
+            <span>🌐</span> Server-Side Request Forgery (SSRF)
+        </h1>
+        <p class="text-gray-400 text-sm mt-1 max-w-3xl">
+            SSRF occurs when a web application makes an HTTP request to an arbitrary URL supplied by the user without validating destination host, protocol, or IP address. Attackers use this to query internal microservices, AWS/cloud metadata, or local loopback interfaces.
+        </p>
+    </div>
+
+    <!-- Playground Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <div class="lg:col-span-1 bg-cardbg border border-gray-800 rounded-xl p-5 flex flex-col justify-between">
+            <div>
+                <h2 class="text-base font-bold text-cyan-400 mb-2 flex items-center gap-2">
+                    <span>🔗</span> URL Webhook &amp; Previewer
+                </h2>
+                <p class="text-xs text-gray-400 mb-4">
+                    The backend uses Python's <code class="text-cyan-300">requests.get(url)</code> to fetch and display remote URLs. Test fetching internal endpoints like <code class="text-red-400">http://127.0.0.1:5000/internal/cloud-metadata</code>!
+                </p>
+
+                <!-- SSRF Form -->
+                <form action="{{ url_for('ssrf') }}" method="POST" class="space-y-3">
+                    <div>
+                        <label class="block text-xs font-mono text-gray-400 mb-1">Target URL to Fetch:</label>
+                        <input type="text" name="url" value="{{ url or 'http://127.0.0.1:5000/internal/cloud-metadata' }}" class="w-full bg-terminal border border-gray-700 rounded p-2 text-xs text-cyan-300 font-mono focus:border-cyan-500 focus:outline-none" placeholder="http://127.0.0.1:5000/internal/cloud-metadata" required>
+                    </div>
+                    <button type="submit" class="w-full bg-cyan-900 hover:bg-cyan-800 text-cyan-100 border border-cyan-700 font-semibold text-xs py-2 rounded transition">
+                        Dispatch Server Request &rarr;
+                    </button>
+                </form>
+
+                <!-- Quick SSRF Payloads -->
+                <div class="mt-4 pt-3 border-t border-gray-800">
+                    <span class="text-[11px] font-mono text-gray-400 block mb-1">INTERNAL TARGETS (CLICK TO COPY):</span>
+                    <div class="flex flex-col gap-1.5">
+                        <span class="copy-payload payload-badge text-[11px] text-red-300 px-2 py-1 rounded break-all" data-payload="http://127.0.0.1:5000/internal/cloud-metadata">
+                            http://127.0.0.1:5000/internal/cloud-metadata
+                        </span>
+                        <span class="copy-payload payload-badge text-[11px] text-cyan-300 px-2 py-1 rounded break-all" data-payload="http://localhost:5000/.git/config">
+                            http://localhost:5000/.git/config
+                        </span>
+                        <span class="copy-payload payload-badge text-[11px] text-amber-300 px-2 py-1 rounded break-all" data-payload="http://169.254.169.254/latest/meta-data/">
+                            http://169.254.169.254/latest/meta-data/ (AWS)
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4 text-[11px] text-gray-500">
+                Notice how the request originates from the server's own IP address, bypassing firewalls and perimeter security.
+            </div>
+        </div>
+
+        <!-- Response Viewer Screen -->
+        <div class="lg:col-span-2 terminal-box overflow-hidden flex flex-col">
+            <div class="terminal-header">
+                <span class="terminal-dot bg-red-500"></span>
+                <span class="terminal-dot bg-yellow-500"></span>
+                <span class="terminal-dot bg-green-500"></span>
+                <span class="text-xs text-gray-400 font-mono ml-2">Server Response Body</span>
+                {% if status_code %}
+                    <span class="ml-auto text-xs font-mono px-2 py-0.5 rounded {% if status_code == 200 %}bg-emerald-950 text-emerald-300 border border-emerald-700{% else %}bg-amber-950 text-amber-300 border border-amber-700{% endif %}">
+                        HTTP Status: {{ status_code }}
+                    </span>
+                {% endif %}
+            </div>
+            <div class="p-4 flex-1 bg-black/80 font-mono text-xs overflow-y-auto max-h-[440px]">
+                {% if response_body %}
+                    <pre class="text-emerald-400 whitespace-pre-wrap leading-relaxed">{{ response_body }}</pre>
+                {% elif error_msg %}
+                    <div class="p-3 bg-red-950/80 border border-red-500 text-red-200 rounded">
+                        ❌ Connection Failed: {{ error_msg }}
+                    </div>
+                {% else %}
+                    <div class="text-gray-600 italic">No request sent yet. Enter a URL on the left and submit.</div>
+                {% endif %}
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Code Explanation & Defense -->
+    <div class="bg-cardbg border border-gray-800 rounded-xl p-6">
+        <h3 class="text-lg font-bold text-white mb-2 flex items-center gap-2">
+            <span>🛡️</span> Vulnerable vs. Secure Implementation
+        </h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <span class="text-xs font-mono font-bold text-red-400 block mb-1">❌ VULNERABLE CODE (app.py):</span>
+                <pre><code class="language-python"># Blindly fetches any user-supplied URL
+resp = requests.get(url, timeout=3)
+return resp.text</code></pre>
+            </div>
+            <div>
+                <span class="text-xs font-mono font-bold text-emerald-400 block mb-1">✅ SECURE REMEDIATION:</span>
+                <pre><code class="language-python"># 1. Enforce strict domain whitelisting
+# 2. Resolve DNS and block private / loopback IP ranges:
+# (127.0.0.0/8, 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 169.254.169.254)
+# 3. Disable HTTP redirects to prevent bypasses</code></pre>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

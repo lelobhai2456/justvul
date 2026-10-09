@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block title %}CSRF Vulnerability Lab - VulnLab{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Header -->
+    <div class="bg-cardbg border border-gray-800 rounded-xl p-6">
+        <div class="flex items-center gap-2">
+            <span class="text-xs font-mono uppercase bg-amber-950 text-amber-400 border border-amber-800 px-2 py-0.5 rounded">OWASP Top 10</span>
+            <span class="text-xs font-mono uppercase bg-red-950 text-red-400 border border-red-800 px-2 py-0.5 rounded">Session Riding</span>
+        </div>
+        <h1 class="text-2xl font-bold text-white mt-2 flex items-center gap-2">
+            <span>🎭</span> Cross-Site Request Forgery (CSRF)
+        </h1>
+        <p class="text-gray-400 text-sm mt-1 max-w-3xl">
+            CSRF tricks a victim into executing unwanted actions on a web application in which they're currently authenticated. Because browsers automatically send session cookies with cross-site requests, a malicious website can trigger sensitive actions (password change, fund transfer) without user consent!
+        </p>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        <!-- Sensitive Action Form (Victim Portal) -->
+        <div class="bg-cardbg border border-gray-800 rounded-xl p-5 flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between mb-3">
+                    <h2 class="text-base font-bold text-cyan-400 flex items-center gap-2">
+                        <span>💸</span> VulnBank: Transfer Funds
+                    </h2>
+                    <span class="text-xs font-mono bg-red-950 text-red-400 border border-red-800 px-2 py-0.5 rounded">No CSRF Token</span>
+                </div>
+                <p class="text-xs text-gray-400 mb-4">
+                    Logged in as: <strong class="text-cyan-300">{{ user['username'] }}</strong> | Current Balance: <strong class="text-yellow-300 font-mono">${{ "%.2f"|format(user['account_balance']) }}</strong>
+                </p>
+
+                <!-- Transfer Form lacking CSRF token -->
+                <form action="{{ url_for('csrf_transfer') }}" method="POST" class="space-y-3">
+                    <div>
+                        <label class="block text-xs font-mono text-gray-400 mb-1">Recipient Username:</label>
+                        <select name="recipient" class="w-full bg-terminal border border-gray-700 rounded p-2 text-xs text-cyan-300 font-mono focus:border-cyan-500 focus:outline-none">
+                            {% for u in all_users %}
+                                {% if u['id'] != user['id'] %}
+                                    <option value="{{ u['username'] }}">{{ u['username'] }} (Current: ${{ "%.2f"|format(u['account_balance']) }})</option>
+                                {% endif %}
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-mono text-gray-400 mb-1">Transfer Amount ($):</label>
+                        <input type="number" step="0.01" name="amount" value="50.00" class="w-full bg-terminal border border-gray-700 rounded p-2 text-xs text-yellow-300 font-mono focus:border-yellow-500 focus:outline-none" required>
+                    </div>
+                    <button type="submit" class="w-full bg-cyan-900 hover:bg-cyan-800 text-cyan-100 border border-cyan-700 font-semibold text-xs py-2 rounded transition">
+                        Transfer Funds Now &rarr;
+                    </button>
+                </form>
+            </div>
+
+            <!-- Notice on missing token -->
+            <div class="mt-4 p-3 bg-red-950/40 rounded-lg border border-red-900/60 text-[11px] font-mono text-red-300">
+                ⚠️ Notice: Inspect this form's HTML in DevTools. There is no &lt;input type="hidden" name="csrf_token"&gt;! Any website you visit can submit this form on your behalf!
+            </div>
+        </div>
+
+        <!-- Attacker Simulation & Exploit Generator -->
+        <div class="bg-cardbg border border-amber-900/50 rounded-xl p-5 flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between mb-3">
+                    <h2 class="text-base font-bold text-amber-400 flex items-center gap-2">
+                        <span>🦹</span> Attacker PoC Simulation
+                    </h2>
+                    <span class="text-xs font-mono bg-amber-950 text-amber-400 border border-amber-800 px-2 py-0.5 rounded">1-Click Exploit</span>
+                </div>
+                <p class="text-xs text-gray-400 mb-4">
+                    We've set up a simulated malicious external page (<code class="text-amber-300">/csrf/attacker-simulation</code>) containing a hidden, auto-submitting form that steals $200 from your account and sends it to <strong class="text-red-400">charlie</strong>.
+                </p>
+
+                <div class="p-3 bg-gray-950 rounded-lg border border-gray-800 font-mono text-xs text-gray-300 mb-4">
+                    <span class="text-gray-500 block mb-1">ATTACKER'S MALICIOUS PAYLOAD CODE:</span>
+                    <pre><code class="language-html">&lt;form id="exploit" action="http://127.0.0.1:5000/csrf/transfer" method="POST"&gt;
+  &lt;input type="hidden" name="recipient" value="charlie"&gt;
+  &lt;input type="hidden" name="amount" value="200.00"&gt;
+&lt;/form&gt;
+&lt;script&gt;
+  document.getElementById('exploit').submit();
+&lt;/script&gt;</code></pre>
+                </div>
+            </div>
+
+            <div>
+                <a href="{{ url_for('csrf_attacker') }}" target="_blank" class="w-full bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white font-bold text-xs py-2.5 px-4 rounded-lg shadow-lg flex items-center justify-center gap-2 transition">
+                    <span>🚀</span>
+                    <span>Open Attacker PoC Page (Triggers Exploit!)</span>
+                </a>
+                <span class="text-[11px] text-gray-500 block mt-2 text-center">Opens in new tab, executes CSRF transfer, and redirects back.</span>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Defense Section -->
+    <div class="bg-cardbg border border-gray-800 rounded-xl p-6">
+        <h3 class="text-lg font-bold text-white mb-2 flex items-center gap-2">
+            <span>🛡️</span> How to Prevent CSRF
+        </h3>
+        <div class="text-xs text-gray-400 space-y-2">
+            <p>1. <strong class="text-gray-200">Anti-CSRF Tokens:</strong> Generate a cryptographically random, unpredictable token tied to the user's session (e.g. Flask-WTF / Synchronizer Token Pattern) and validate it on every state-changing request.</p>
+            <p>2. <strong class="text-gray-200">SameSite Cookie Flag:</strong> Set cookie attributes to <code class="text-emerald-400">SameSite=Lax</code> or <code class="text-emerald-400">SameSite=Strict</code> to prevent ambient cookie submission from cross-origin requests.</p>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+
+{% block title %}SQL Injection (SQLi) Lab - VulnLab{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Header -->
+    <div class="bg-cardbg border border-gray-800 rounded-xl p-6">
+        <div class="flex items-center gap-2">
+            <span class="text-xs font-mono uppercase bg-red-950 text-red-400 border border-red-800 px-2 py-0.5 rounded">OWASP Top 10</span>
+            <span class="text-xs font-mono uppercase bg-cyan-950 text-cyan-400 border border-cyan-800 px-2 py-0.5 rounded">Server-Side</span>
+        </div>
+        <h1 class="text-2xl font-bold text-white mt-2 flex items-center gap-2">
+            <span>💉</span> SQL Injection Playground (SQLi)
+        </h1>
+        <p class="text-gray-400 text-sm mt-1 max-w-3xl">
+            SQL Injection occurs when untrusted user input is directly concatenated into a dynamic database query. Practice bypassing authentication logic and using UNION statements to exfiltrate hidden tables and sensitive financial records.
+        </p>
+    </div>
+
+    <!-- Playground Tabs -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        <!-- Challenge 1: Authentication Bypass -->
+        <div class="bg-cardbg border border-gray-800 rounded-xl p-5 flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between mb-3">
+                    <h2 class="text-base font-bold text-cyan-400 flex items-center gap-2">
+                        <span>🔓</span> Challenge 1: Authentication Bypass
+                    </h2>
+                    <span class="text-xs font-mono bg-red-950 text-red-400 border border-red-800 px-2 py-0.5 rounded">Login Form</span>
+                </div>
+                <p class="text-xs text-gray-400 mb-4">
+                    The backend queries the SQLite database using string formatting: <code class="text-red-300">SELECT * FROM users WHERE username = '{user}' AND password = '{pass}'</code>.
+                </p>
+
+                <!-- Login Form -->
+                <form action="{{ url_for('sqli_login') }}" method="POST" class="space-y-3">
+                    <div>
+                        <label class="block text-xs font-mono text-gray-400 mb-1">Username:</label>
+                        <input type="text" name="username" class="w-full bg-terminal border border-gray-700 rounded p-2 text-sm text-cyan-300 font-mono focus:border-cyan-500 focus:outline-none" placeholder="e.g. admin' --" required>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-mono text-gray-400 mb-1">Password:</label>
+                        <input type="text" name="password" class="w-full bg-terminal border border-gray-700 rounded p-2 text-sm text-cyan-300 font-mono focus:border-cyan-500 focus:outline-none" placeholder="Any password or blank">
+                    </div>
+                    <button type="submit" class="w-full bg-cyan-900 hover:bg-cyan-800 text-cyan-100 border border-cyan-700 font-semibold text-xs py-2 rounded transition">
+                        Attempt Login &rarr;
+                    </button>
+                </form>
+
+                <!-- Cheat Sheet Payloads -->
+                <div class="mt-4 pt-3 border-t border-gray-800">
+                    <span class="text-[11px] font-mono text-gray-400 block mb-1">QUICK PAYLOADS (CLICK TO COPY):</span>
+                    <div class="flex flex-wrap gap-1.5">
+                        <span class="copy-payload payload-badge text-[11px] text-cyan-300 px-2 py-0.5 rounded" data-payload="admin' --">admin' --</span>
+                        <span class="copy-payload payload-badge text-[11px] text-cyan-300 px-2 py-0.5 rounded" data-payload="' OR '1'='1' --">' OR '1'='1' --</span>
+                        <span class="copy-payload payload-badge text-[11px] text-cyan-300 px-2 py-0.5 rounded" data-payload="' OR 1=1 --">' OR 1=1 --</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Login Query Execution Result -->
+            {% if executed_query %}
+            <div class="mt-4 p-3 bg-gray-950 rounded-lg border border-gray-800 font-mono text-xs">
+                <span class="text-gray-500 block mb-1">RAW EXECUTED SQL:</span>
+                <code class="text-amber-300 break-all">{{ executed_query }}</code>
+                {% if user %}
+                    <div class="mt-2 p-2 rounded bg-emerald-950/80 border border-emerald-500 text-emerald-200">
+                        🎉 <strong>Authentication Bypassed!</strong> Logged in as: <strong>{{ user['username'] }}</strong> (Role: {{ user['role'] }})<br>
+                        <span class="text-[11px] text-emerald-400">Secret Token: {{ user['secret_api_key'] }}</span>
+                    </div>
+                {% elif error_msg %}
+                    <div class="mt-2 p-2 rounded bg-red-950/80 border border-red-500 text-red-200">
+                        ❌ SQL Syntax Error: {{ error_msg }}
+                    </div>
+                {% else %}
+                    <div class="mt-2 p-2 rounded bg-gray-900 border border-gray-700 text-gray-400">
+                        Invalid credentials. Query returned 0 rows.
+                    </div>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Challenge 2: Search & UNION-Based Data Exfiltration -->
+        <div class="bg-cardbg border border-gray-800 rounded-xl p-5 flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between mb-3">
+                    <h2 class="text-base font-bold text-amber-400 flex items-center gap-2">
+                        <span>🕵️</span> Challenge 2: UNION Data Exfiltration
+                    </h2>
+                    <span class="text-xs font-mono bg-amber-950 text-amber-400 border border-amber-800 px-2 py-0.5 rounded">UNION SELECT</span>
+                </div>
+                <p class="text-xs text-gray-400 mb-4">
+                    The product search endpoint filters by name: <code class="text-amber-300">...WHERE name LIKE '%{query}%'</code>. Use a <code class="text-cyan-300">UNION SELECT</code> payload to extract credit card vaults from the hidden table <code class="text-red-400">sensitive_records</code>!
+                </p>
+
+                <!-- Search Form -->
+                <form action="{{ url_for('sqli_search') }}" method="GET" class="space-y-3">
+                    <div>
+                        <label class="block text-xs font-mono text-gray-400 mb-1">Search Products:</label>
+                        <div class="flex gap-2">
+                            <input type="text" name="q" value="{{ search_query or '' }}" class="flex-1 bg-terminal border border-gray-700 rounded p-2 text-sm text-amber-300 font-mono focus:border-amber-500 focus:outline-none" placeholder="e.g. Ducky' UNION SELECT..." required>
+                            <button type="submit" class="bg-amber-900 hover:bg-amber-800 text-amber-100 border border-amber-700 font-semibold text-xs px-4 rounded transition">
+                                Search
+                            </button>
+                        </div>
+                    </div>
+                </form>
+
+                <!-- Cheat Sheet Payloads -->
+                <div class="mt-4 pt-3 border-t border-gray-800">
+                    <span class="text-[11px] font-mono text-gray-400 block mb-1">UNION EXPLOIT PAYLOADS (CLICK TO COPY):</span>
+                    <div class="flex flex-col gap-1.5">
+                        <span class="copy-payload payload-badge text-[11px] text-amber-300 px-2 py-1 rounded break-all" data-payload="' UNION SELECT id, full_name, credit_card, cvv, vault_code FROM sensitive_records --">
+                            ' UNION SELECT id, full_name, credit_card, cvv, vault_code FROM sensitive_records --
+                        </span>
+                        <span class="copy-payload payload-badge text-[11px] text-amber-300 px-2 py-1 rounded break-all" data-payload="' UNION SELECT id, username, password, email, secret_api_key FROM users --">
+                            ' UNION SELECT id, username, password, email, secret_api_key FROM users --
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Search Results Display -->
+            {% if executed_search_query %}
+            <div class="mt-4 p-3 bg-gray-950 rounded-lg border border-gray-800 font-mono text-xs">
+                <span class="text-gray-500 block mb-1">EXECUTED QUERY:</span>
+                <code class="text-cyan-300 break-all">{{ executed_search_query }}</code>
+
+                {% if search_results %}
+                <div class="mt-2 overflow-x-auto max-h-48 overflow-y-auto">
+                    <table class="w-full text-left border-collapse text-[11px]">
+                        <thead>
+                            <tr class="border-b border-gray-800 text-gray-400">
+                                <th class="p-1">Col 1</th>
+                                <th class="p-1">Col 2</th>
+                                <th class="p-1">Col 3</th>
+                                <th class="p-1">Col 4</th>
+                                <th class="p-1">Col 5</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in search_results %}
+                            <tr class="border-b border-gray-900 hover:bg-gray-900/50">
+                                <td class="p-1 text-cyan-400">{{ row[0] }}</td>
+                                <td class="p-1 text-yellow-300 font-semibold">{{ row[1] }}</td>
+                                <td class="p-1 text-red-300 font-mono">{{ row[2] }}</td>
+                                <td class="p-1 text-gray-300">{{ row[3] }}</td>
+                                <td class="p-1 text-emerald-400 font-mono">{{ row[4] }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% elif search_error %}
+                <div class="mt-2 p-2 rounded bg-red-950/80 border border-red-500 text-red-200">
+                    ❌ SQLite Error: {{ search_error }}
+                </div>
+                {% else %}
+                <div class="mt-2 text-gray-500 italic">No rows returned.</div>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+
+    </div>
+
+    <!-- Code Explanation & Secure Remediation -->
+    <div class="bg-cardbg border border-gray-800 rounded-xl p-6">
+        <h3 class="text-lg font-bold text-white mb-2 flex items-center gap-2">
+            <span>🛡️</span> Vulnerable vs. Secure Implementation
+        </h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <span class="text-xs font-mono font-bold text-red-400 block mb-1">❌ VULNERABLE CODE (app.py):</span>
+                <pre><code class="language-python"># Direct string concatenation allows input to alter query syntax
+cursor.execute(f"SELECT * FROM users WHERE username = '{username}' AND password = '{password}'")</code></pre>
+            </div>
+            <div>
+                <span class="text-xs font-mono font-bold text-emerald-400 block mb-1">✅ SECURE REMEDIATION (Parameterized Queries):</span>
+                <pre><code class="language-python"># Use placeholders (?) so user input is strictly treated as data
+cursor.execute("SELECT * FROM users WHERE username = ? AND password = ?", (username, password))</code></pre>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

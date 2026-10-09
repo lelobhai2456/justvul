@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+
+{% block title %}Cross-Site Scripting (XSS) Lab - VulnLab{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Header -->
+    <div class="bg-cardbg border border-gray-800 rounded-xl p-6">
+        <div class="flex items-center gap-2">
+            <span class="text-xs font-mono uppercase bg-amber-950 text-amber-400 border border-amber-800 px-2 py-0.5 rounded">OWASP Top 10</span>
+            <span class="text-xs font-mono uppercase bg-purple-950 text-purple-400 border border-purple-800 px-2 py-0.5 rounded">Client-Side Code Execution</span>
+        </div>
+        <h1 class="text-2xl font-bold text-white mt-2 flex items-center gap-2">
+            <span>⚡</span> Cross-Site Scripting Lab (XSS)
+        </h1>
+        <p class="text-gray-400 text-sm mt-1 max-w-3xl">
+            Cross-Site Scripting occurs when an application includes untrusted data in a web page without proper validation or escaping, enabling attackers to execute malicious scripts in victims' browsers (cookie theft, defacement, session hijacking).
+        </p>
+    </div>
+
+    <!-- 3 Flavors of XSS -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <!-- 1. Reflected XSS -->
+        <div class="bg-cardbg border border-gray-800 rounded-xl p-5 flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between mb-3">
+                    <h2 class="text-base font-bold text-cyan-400 flex items-center gap-2">
+                        <span>🔍</span> 1. Reflected XSS
+                    </h2>
+                    <span class="text-xs font-mono bg-cyan-950 text-cyan-400 border border-cyan-800 px-2 py-0.5 rounded">GET Query</span>
+                </div>
+                <p class="text-xs text-gray-400 mb-4">
+                    The search parameter <code class="text-cyan-300">?term=</code> is rendered directly into the HTML response using Jinja2's <code class="text-red-300">| safe</code> filter without escaping.
+                </p>
+
+                <!-- Search form -->
+                <form action="{{ url_for('xss_reflected') }}" method="GET" class="space-y-3">
+                    <div>
+                        <label class="block text-xs font-mono text-gray-400 mb-1">Search Keyword:</label>
+                        <input type="text" name="term" value="{{ reflected_term or '' }}" class="w-full bg-terminal border border-gray-700 rounded p-2 text-xs text-cyan-300 font-mono focus:border-cyan-500 focus:outline-none" placeholder="e.g. <img src=x onerror=alert('Reflected!')>" required>
+                    </div>
+                    <button type="submit" class="w-full bg-cyan-900 hover:bg-cyan-800 text-cyan-100 border border-cyan-700 font-semibold text-xs py-2 rounded transition">
+                        Submit Reflected Search &rarr;
+                    </button>
+                </form>
+
+                {% if reflected_term %}
+                <div class="mt-4 p-3 bg-gray-950 rounded-lg border border-gray-800">
+                    <span class="text-[11px] font-mono text-gray-400 block mb-1">RAW REFLECTED OUTPUT IN DOM:</span>
+                    <!-- INTENTIONALLY VULNERABLE: Rendered with safe filter -->
+                    <div class="text-xs text-white p-2 rounded bg-black/60 border border-gray-900">
+                        Search results for: {{ reflected_term | safe }}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Quick Payload Buttons -->
+            <div class="mt-4 pt-3 border-t border-gray-800">
+                <span class="text-[11px] font-mono text-gray-400 block mb-1">REFLECTED PAYLOADS:</span>
+                <div class="flex flex-col gap-1">
+                    <span class="copy-payload payload-badge text-[11px] text-cyan-300 px-2 py-0.5 rounded" data-payload="<script>alert('Reflected XSS Triggered!')</script>">&lt;script&gt;alert('Reflected!')&lt;/script&gt;</span>
+                    <span class="copy-payload payload-badge text-[11px] text-cyan-300 px-2 py-0.5 rounded" data-payload="<img src=x onerror=alert(document.cookie)>">&lt;img src=x onerror=alert(document.cookie)&gt;</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. Stored XSS -->
+        <div class="bg-cardbg border border-gray-800 rounded-xl p-5 flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between mb-3">
+                    <h2 class="text-base font-bold text-amber-400 flex items-center gap-2">
+                        <span>💾</span> 2. Stored XSS (Persistent)
+                    </h2>
+                    <span class="text-xs font-mono bg-amber-950 text-amber-400 border border-amber-800 px-2 py-0.5 rounded">Database Wall</span>
+                </div>
+                <p class="text-xs text-gray-400 mb-4">
+                    Comments submitted here are stored in the database unescaped. Whenever ANY user loads this page, the stored payload executes automatically!
+                </p>
+
+                <!-- Post Comment Form -->
+                <form action="{{ url_for('xss_stored') }}" method="POST" class="space-y-2 mb-3">
+                    <div>
+                        <input type="text" name="author" class="w-full bg-terminal border border-gray-700 rounded p-1.5 text-xs text-amber-300 font-mono focus:border-amber-500 focus:outline-none" placeholder="Your Name" value="{{ current_username }}" required>
+                    </div>
+                    <div>
+                        <textarea name="comment" rows="2" class="w-full bg-terminal border border-gray-700 rounded p-1.5 text-xs text-amber-300 font-mono focus:border-amber-500 focus:outline-none" placeholder="Comment (e.g. <b onmouseover=alert(1)>Hover me</b>)" required></textarea>
+                    </div>
+                    <button type="submit" class="w-full bg-amber-900 hover:bg-amber-800 text-amber-100 border border-amber-700 font-semibold text-xs py-1.5 rounded transition">
+                        Post Stored Comment
+                    </button>
+                </form>
+
+                <!-- Stored Comments Wall -->
+                <div class="mt-3">
+                    <div class="flex items-center justify-between mb-1.5">
+                        <span class="text-[11px] font-mono text-gray-400">STORED COMMENTS WALL:</span>
+                        <form action="{{ url_for('xss_clear') }}" method="POST">
+                            <button type="submit" class="text-[10px] text-red-400 hover:underline">Clear All</button>
+                        </form>
+                    </div>
+                    <div class="space-y-2 max-h-48 overflow-y-auto">
+                        {% for c in comments %}
+                        <div class="p-2 bg-gray-950 rounded border border-gray-800 text-xs">
+                            <div class="flex items-center justify-between text-[10px] text-gray-500">
+                                <span class="font-semibold text-gray-300">{{ c['author'] }}</span>
+                                <span>{{ c['created_at'] }}</span>
+                            </div>
+                            <!-- VULNERABLE: Rendered with safe filter -->
+                            <div class="mt-1 text-gray-200">
+                                {{ c['comment'] | safe }}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Payload Buttons -->
+            <div class="mt-4 pt-3 border-t border-gray-800">
+                <span class="text-[11px] font-mono text-gray-400 block mb-1">STORED PAYLOADS:</span>
+                <div class="flex flex-col gap-1">
+                    <span class="copy-payload payload-badge text-[11px] text-amber-300 px-2 py-0.5 rounded" data-payload="<script>alert('Stored XSS - Executed on page load!')</script>">&lt;script&gt;alert('Stored!')&lt;/script&gt;</span>
+                    <span class="copy-payload payload-badge text-[11px] text-amber-300 px-2 py-0.5 rounded" data-payload="<h1 style='color:red;'>DEFACED BY XSS</h1>">&lt;h1 style='color:red;'&gt;DEFACED&lt;/h1&gt;</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. DOM-based XSS -->
+        <div class="bg-cardbg border border-gray-800 rounded-xl p-5 flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between mb-3">
+                    <h2 class="text-base font-bold text-purple-400 flex items-center gap-2">
+                        <span>🧩</span> 3. DOM-Based XSS
+                    </h2>
+                    <span class="text-xs font-mono bg-purple-950 text-purple-400 border border-purple-800 px-2 py-0.5 rounded">Client-Side Sink</span>
+                </div>
+                <p class="text-xs text-gray-400 mb-4">
+                    The client-side JavaScript reads from a source (input or <code class="text-purple-300">window.location.hash</code>) and injects it straight into an unsafe sink: <code class="text-red-300">element.innerHTML = ...</code>.
+                </p>
+
+                <!-- DOM Input Form -->
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-xs font-mono text-gray-400 mb-1">Interactive DOM Sink Input:</label>
+                        <input type="text" id="dom-xss-input" class="w-full bg-terminal border border-gray-700 rounded p-2 text-xs text-purple-300 font-mono focus:border-purple-500 focus:outline-none" placeholder="e.g. <svg onload=alert('DOM XSS')>">
+                    </div>
+                    <button id="btn-run-dom-xss" class="w-full bg-purple-900 hover:bg-purple-800 text-purple-100 border border-purple-700 font-semibold text-xs py-2 rounded transition">
+                        Trigger DOM innerHTML Sink &rarr;
+                    </button>
+                </div>
+
+                <div class="mt-4 p-3 bg-gray-950 rounded-lg border border-gray-800">
+                    <span class="text-[11px] font-mono text-gray-400 block mb-1">DOM TARGET SINK:</span>
+                    <div id="dom-xss-target" class="text-xs text-gray-300 p-2 rounded bg-black/60 border border-gray-900 min-h-[40px]">
+                        Waiting for DOM insertion...
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Payload Buttons -->
+            <div class="mt-4 pt-3 border-t border-gray-800">
+                <span class="text-[11px] font-mono text-gray-400 block mb-1">DOM PAYLOADS:</span>
+                <div class="flex flex-col gap-1">
+                    <span class="copy-payload payload-badge text-[11px] text-purple-300 px-2 py-0.5 rounded" data-payload="<svg onload=alert('DOM-XSS!')>">&lt;svg onload=alert('DOM-XSS!')&gt;</span>
+                    <span class="copy-payload payload-badge text-[11px] text-purple-300 px-2 py-0.5 rounded" data-payload="<iframe src='javascript:alert(1)'>">&lt;iframe src='javascript:alert(1)'&gt;</span>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Remediation Banner -->
+    <div class="bg-cardbg border border-gray-800 rounded-xl p-6">
+        <h3 class="text-lg font-bold text-white mb-2 flex items-center gap-2">
+            <span>🛡️</span> Prevention &amp; Safe Coding
+        </h3>
+        <p class="text-xs text-gray-400 mb-3">
+            To stop Cross-Site Scripting, always sanitize untrusted input, encode output based on context (HTML body, attributes, JavaScript variables), use <code class="text-emerald-400">textContent</code> instead of <code class="text-red-400">innerHTML</code>, and enforce a strong Content Security Policy (CSP).
+        </p>
+    </div>
+
+</div>
+{% endblock %}

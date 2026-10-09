@@ -1,0 +1,114 @@
+/* VulnLab Custom Cybersecurity & Terminal Theme */
+:root {
+    --bg-dark: #0b0f19;
+    --bg-card: #111827;
+    --bg-card-hover: #1f2937;
+    --border-color: #374151;
+    --accent-cyan: #06b6d4;
+    --accent-red: #ef4444;
+    --accent-green: #10b981;
+    --accent-amber: #f59e0b;
+    --text-primary: #f3f4f6;
+    --text-muted: #9ca3af;
+}
+
+body {
+    background-color: var(--bg-dark);
+    color: var(--text-primary);
+    font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* Cyber Grid Background Pattern */
+.cyber-grid {
+    background-image: linear-gradient(to right, rgba(55, 65, 81, 0.15) 1px, transparent 1px),
+                      linear-gradient(to bottom, rgba(55, 65, 81, 0.15) 1px, transparent 1px);
+    background-size: 32px 32px;
+}
+
+/* Terminal Console Box */
+.terminal-box {
+    background-color: #030712;
+    border: 1px solid #1f2937;
+    border-radius: 0.5rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    position: relative;
+}
+
+.terminal-header {
+    background-color: #111827;
+    border-bottom: 1px solid #1f2937;
+    padding: 0.5rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.terminal-dot {
+    width: 0.75rem;
+    height: 0.75rem;
+    border-radius: 9999px;
+}
+
+/* Glow effects */
+.glow-cyan {
+    box-shadow: 0 0 15px rgba(6, 182, 212, 0.25);
+}
+
+.glow-red {
+    box-shadow: 0 0 15px rgba(239, 68, 68, 0.25);
+}
+
+/* ==============================================================
+   PASTEJACKING & CLIPBOARD HIJACKING CSS TECHNIQUES
+   ============================================================== */
+
+/* Technique 1: Off-screen payload injection */
+/* Visual text is visible, but user selection captures the hidden offscreen payload */
+.pastejack-offscreen-payload {
+    position: absolute;
+    left: -9999px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+}
+
+/* Technique 2: User-select manipulation */
+/* Visible fake command has user-select: none, hidden real command is selectable */
+.pastejack-unselectable-visual {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+.pastejack-zero-size-payload {
+    font-size: 0.1px;
+    opacity: 0.01;
+    color: transparent;
+    display: inline-block;
+}
+
+/* Safe Paste Inspector Box */
+.paste-inspector-box {
+    border: 2px dashed #4b5563;
+    transition: all 0.2s ease-in-out;
+}
+
+.paste-inspector-box:focus-within {
+    border-color: #06b6d4;
+    box-shadow: 0 0 15px rgba(6, 182, 212, 0.3);
+}
+
+/* Cheat Sheet Payload Badges */
+.payload-badge {
+    background-color: rgba(31, 41, 55, 0.8);
+    border: 1px solid #374151;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    transition: all 0.15s ease;
+}
+
+.payload-badge:hover {
+    background-color: rgba(55, 65, 81, 0.8);
+    border-color: #06b6d4;
+    cursor: pointer;
+}

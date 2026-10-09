@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+
+{% block title %}Pastejacking & Clipboard Hijacking Lab - VulnLab{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="bg-cardbg border border-gray-800 rounded-xl p-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <div class="flex items-center gap-2">
+                    <span class="text-xs font-mono uppercase bg-red-950 text-red-400 border border-red-800 px-2 py-0.5 rounded">Special Feature</span>
+                    <span class="text-xs font-mono uppercase bg-amber-950 text-amber-400 border border-amber-800 px-2 py-0.5 rounded">Client-Side Threat</span>
+                </div>
+                <h1 class="text-2xl font-bold text-white mt-2 flex items-center gap-2">
+                    <span>📋</span> Pastejacking & Clipboard Hijacking
+                </h1>
+                <p class="text-gray-400 text-sm mt-1 max-w-3xl">
+                    Demonstration of how what is visually displayed on a web page can be completely different from what gets copied into your system clipboard. If an unsuspecting user pastes the copied text into a terminal, it can instantly execute arbitrary commands!
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Interactive Demos Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        <!-- Demo 1: JavaScript Copy Event Hijacking -->
+        <div class="bg-cardbg border border-gray-800 rounded-xl p-5 flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between mb-3">
+                    <h2 class="text-base font-bold text-cyan-400 flex items-center gap-2">
+                        <span>⚡</span> Technique 1: JavaScript Event Interception
+                    </h2>
+                    <span class="text-xs font-mono bg-cyan-950 text-cyan-400 border border-cyan-800 px-2 py-0.5 rounded">JS Event Listener</span>
+                </div>
+                <p class="text-xs text-gray-400 mb-3">
+                    Malicious JavaScript intercepts the browser's <code class="text-cyan-300">copy</code> event and replaces the clipboard content with an attacker-crafted command containing an auto-executing newline.
+                </p>
+
+                <!-- Target box to select or copy -->
+                <div class="terminal-box p-4 mb-3">
+                    <div class="text-xs text-gray-500 mb-1 flex items-center justify-between font-mono">
+                        <span>WHAT YOU SEE ON SCREEN:</span>
+                        <span class="text-emerald-400">Harmless Shell Command</span>
+                    </div>
+                    <!-- Selectable text container -->
+                    <div id="js-hijack-container" class="cursor-pointer font-mono text-sm text-green-400 bg-black/60 p-3 rounded border border-gray-800 selection:bg-cyan-500 selection:text-black">
+                        git clone https://github.com/torvalds/linux.git
+                    </div>
+                    <div class="text-[11px] text-gray-500 mt-2 italic">
+                        Tip: Highlight the text above and press <kbd class="px-1.5 py-0.5 bg-gray-800 border border-gray-700 rounded text-gray-300">Ctrl + C</kbd>, or click the button below.
+                    </div>
+                </div>
+            </div>
+
+            <div class="space-y-2">
+                <div class="flex gap-2">
+                    <button id="btn-copy-js-hijack" class="flex-1 bg-red-950 hover:bg-red-900 text-red-200 border border-red-700 px-3 py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
+                        <span>Copy via Hijacked Handler</span>
+                    </button>
+                    <button id="btn-copy-normal" class="bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-2 rounded-lg text-xs font-medium border border-gray-700 transition">
+                        Normal Copy
+                    </button>
+                </div>
+                <div class="p-2.5 rounded bg-gray-900 border border-gray-800 text-[11px] font-mono text-amber-300">
+                    <strong>Injected Hidden Payload:</strong><br>
+                    <code class="text-red-400">echo "ALERT: PASTEJACKING ATTACK TRIGGERED!" && calc.exe\n</code>
+                </div>
+            </div>
+        </div>
+
+        <!-- Demo 2: CSS / Off-Screen DOM Selection Trick -->
+        <div class="bg-cardbg border border-gray-800 rounded-xl p-5 flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between mb-3">
+                    <h2 class="text-base font-bold text-amber-400 flex items-center gap-2">
+                        <span>🎨</span> Technique 2: CSS DOM Stealth Injection
+                    </h2>
+                    <span class="text-xs font-mono bg-amber-950 text-amber-400 border border-amber-800 px-2 py-0.5 rounded">No JS Required!</span>
+                </div>
+                <p class="text-xs text-gray-400 mb-3">
+                    Even if JavaScript is completely disabled, CSS can hide malicious text off-screen (<code class="text-amber-300">position: absolute; left: -9999px;</code>). When you select the line and copy, the browser includes the off-screen text!
+                </p>
+
+                <div class="terminal-box p-4 mb-3">
+                    <div class="text-xs text-gray-500 mb-1 flex items-center justify-between font-mono">
+                        <span>WHAT YOU SEE ON SCREEN:</span>
+                        <span class="text-emerald-400">echo "Updating System..."</span>
+                    </div>
+                    <!-- CSS trick container: user selects visible text, but selection includes hidden span -->
+                    <div class="font-mono text-sm text-yellow-300 bg-black/60 p-3 rounded border border-gray-800 selection:bg-amber-500 selection:text-black">
+                        <span>echo "Updating System..."</span><span class="pastejack-offscreen-payload"> ; powershell.exe -Command "Start-Process calc.exe" # </span>
+                    </div>
+                    <div class="text-[11px] text-gray-500 mt-2 italic">
+                        Tip: Highlight the box above with your mouse and press <kbd class="px-1.5 py-0.5 bg-gray-800 border border-gray-700 rounded text-gray-300">Ctrl + C</kbd>.
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-2.5 rounded bg-gray-900 border border-gray-800 text-[11px] font-mono text-amber-300">
+                <strong>What your clipboard actually gets:</strong><br>
+                <code class="text-red-400">echo "Updating System..." ; powershell.exe -Command "Start-Process calc.exe" # </code>
+            </div>
+        </div>
+    </div>
+
+    <!-- Safe Clipboard Inspector & Analyzer -->
+    <div class="bg-cardbg border border-cyan-900/60 rounded-xl p-6 glow-cyan">
+        <div class="flex items-center justify-between mb-4">
+            <div>
+                <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                    <span class="text-cyan-400">🔍</span> Safe Clipboard Inspector & Analyzer
+                </h2>
+                <p class="text-xs text-gray-400 mt-0.5">
+                    Paste your clipboard content into this safe quarantine zone to inspect what was secretly copied without running it in your real terminal.
+                </p>
+            </div>
+            <button id="btn-clear-inspector" class="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded border border-gray-700 transition">
+                Clear Inspector
+            </button>
+        </div>
+
+        <div class="space-y-4">
+            <!-- Paste input area -->
+            <div>
+                <label class="block text-xs font-mono text-gray-400 mb-1">SAFE PASTE QUARANTINE BOX (CLICK & PRESS CTRL+V):</label>
+                <textarea id="safe-paste-box" rows="3" class="w-full bg-terminal border-2 paste-inspector-box rounded-lg p-3 font-mono text-sm text-cyan-200 placeholder-gray-600 focus:outline-none" placeholder="Click here and press Ctrl + V to inspect your clipboard contents safely..."></textarea>
+            </div>
+
+            <!-- Dynamic Alert Box -->
+            <div id="paste-security-alert" class="hidden"></div>
+
+            <!-- Analysis breakdown -->
+            <div id="paste-analysis-results" class="hidden grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="bg-gray-950 p-4 rounded-lg border border-gray-800">
+                    <div class="text-xs font-mono font-semibold text-gray-400 uppercase mb-2">Pasted Plain Text:</div>
+                    <pre id="paste-raw-output" class="text-xs font-mono text-yellow-300 whitespace-pre-wrap break-all bg-black/50 p-3 rounded border border-gray-900"></pre>
+                </div>
+
+                <div class="bg-gray-950 p-4 rounded-lg border border-gray-800">
+                    <div class="text-xs font-mono font-semibold text-gray-400 uppercase mb-2">Escape Sequences & Hex Dump:</div>
+                    <pre id="paste-hex-output" class="text-xs font-mono text-cyan-300 whitespace-pre-wrap break-all bg-black/50 p-3 rounded border border-gray-900 max-h-48 overflow-y-auto"></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Educational Deep Dive & Remediation -->
+    <div class="bg-cardbg border border-gray-800 rounded-xl p-6">
+        <h3 class="text-lg font-bold text-white mb-3 flex items-center gap-2">
+            <span>🛡️</span> How Pastejacking Works & How to Protect Yourself
+        </h3>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm text-gray-300">
+            <div class="space-y-3">
+                <h4 class="font-semibold text-red-400">Why is Pastejacking so dangerous?</h4>
+                <p class="text-xs text-gray-400 leading-relaxed">
+                    Developers, sysadmins, and students often copy commands directly from documentation, StackOverflow, or blogs into their command prompt (PowerShell, Bash, Command Prompt).
+                </p>
+                <p class="text-xs text-gray-400 leading-relaxed">
+                    By appending a newline character (<code class="text-red-300">\n</code> or <code class="text-red-300">\r\n</code>), the terminal interprets it as pressing the <kbd class="px-1 bg-gray-800 border border-gray-700 rounded">Enter</kbd> key immediately. The malicious command begins executing before the human eye can even register what was pasted!
+                </p>
+            </div>
+
+            <div class="space-y-3">
+                <h4 class="font-semibold text-emerald-400">Best Defense Practices</h4>
+                <ul class="text-xs text-gray-400 space-y-1.5 list-disc pl-5">
+                    <li><strong class="text-gray-200">Paste into Notepad first:</strong> Always paste commands into a simple text editor before pasting into a terminal with elevated privileges.</li>
+                    <li><strong class="text-gray-200">Terminal Safe-Paste feature:</strong> Modern terminals (like Windows Terminal or iTerm2) have "bracketed paste mode" which warns when pasting multi-line or newline-containing strings.</li>
+                    <li><strong class="text-gray-200">Avoid blind execution:</strong> Never run piped scripts like <code class="text-cyan-300">curl | bash</code> directly from untrusted sources.</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Vulnerable Code Snippet -->
+        <div class="mt-6 pt-4 border-t border-gray-800">
+            <div class="text-xs font-mono font-semibold text-gray-400 mb-2">EXPLOIT SOURCE CODE (HOW THE ATTACKER DOES IT):</div>
+            <pre><code class="language-javascript">// JavaScript Copy Hijacking snippet:
+document.getElementById('target').addEventListener('copy', function(e) {
+    e.preventDefault();
+    const attackerPayload = 'echo "MALICIOUS CODE" && calc.exe\n';
+    e.clipboardData.setData('text/plain', attackerPayload);
+});
+
+// CSS Stealth Injection snippet (Works with JS disabled!):
+// HTML: &lt;span&gt;Harmless Text&lt;/span&gt;&lt;span class="hidden"&gt; &amp;&amp; calc.exe #&lt;/span&gt;
+// CSS:  .hidden { position: absolute; left: -9999px; }</code></pre>
+        </div>
+    </div>
+</div>
+{% endblock %}

